@@ -199,10 +199,10 @@ function CitySidePanel({ city, regionStats, onOpenRainfallModal, onClose }) {
             new TextRun({ text: city.alert || 'Normal — No active alerts', size: 22, font: 'Times New Roman' }),
           ]}),
 
-          // Previous 10-day rainfall report
+          // Previous 5-day rainfall report
           ...(forecast10 && forecast10.length > 0 ? [
             new Paragraph({ spacing: { before: 300, after: 100 }, children: [
-              new TextRun({ text: 'Previous 10-Day Rainfall Report (IMD Readings):', bold: true, size: 24, font: 'Times New Roman', underline: {} }),
+              new TextRun({ text: 'Previous 5-Day Rainfall Report (IMD Readings):', bold: true, size: 24, font: 'Times New Roman', underline: {} }),
             ]}),
             new Table({
               rows: [
@@ -353,11 +353,11 @@ function CitySidePanel({ city, regionStats, onOpenRainfallModal, onClose }) {
       {/* Divider */}
       <div className="mx-4 border-t border-blue-900/30 mb-3" />
 
-      {/* Previous 10-Day Rainfall Report (Real IMD Data) */}
+      {/* Previous 5-Day Rainfall Report (Real IMD Data) */}
       <div className="px-4 pb-3">
         <p className="text-[10px] text-cyan-400 mb-2 font-semibold uppercase tracking-wide flex items-center gap-1.5">
           <CloudRain size={11} />
-          Previous 10-Day Rainfall Report
+          Previous 5-Day Rainfall Report
         </p>
         {loadingForecast ? (
           <div className="h-16 flex items-center justify-center gap-2 text-[10px] text-gray-500">
@@ -370,7 +370,7 @@ function CitySidePanel({ city, regionStats, onOpenRainfallModal, onClose }) {
             <ResponsiveContainer width="100%" height={80}>
               <BarChart data={forecast10} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(59,130,196,0.08)" />
-                <XAxis dataKey="dateFormatted" tick={{ fontSize: 7, fill: '#4e7a9e' }} interval={1} angle={-25} textAnchor="end" height={28} />
+                <XAxis dataKey="dateFormatted" tick={{ fontSize: 7, fill: '#4e7a9e' }} interval={0} angle={-25} textAnchor="end" height={28} />
                 <YAxis tick={{ fontSize: 7, fill: '#4e7a9e' }} />
                 <Tooltip content={<MiniTooltip />} />
                 <Bar dataKey="expectedRainfall" fill="#38bdf8" radius={[3, 3, 0, 0]} name="Actual Rainfall" />

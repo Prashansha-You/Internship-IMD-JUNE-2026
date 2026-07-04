@@ -163,8 +163,8 @@ app.get('/api/forecast10', (req, res) => {
     // Sort dates ascending for the chart (oldest first)
     const sortedDates = Object.keys(dateMap).sort();
     
-    // Take the last 10 days of available data (e.g., June 29 to today)
-    const targetDates = sortedDates.slice(-10);
+    // Take the last 5 days of available data (e.g., June 29 to today)
+    const targetDates = sortedDates.slice(-5);
     
     const data = targetDates.map(dateStr => {
       const dateObj = new Date(dateStr + 'T00:00:00');
