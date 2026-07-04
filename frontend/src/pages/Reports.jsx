@@ -81,7 +81,7 @@ INDIA METEOROLOGICAL DEPARTMENT
 
 ════════════════════════════════════════════════════════
         RAINFALL SUMMARY REPORT
-        Period: 1 May – ${date}
+        Period: 29 June – ${date}
 ════════════════════════════════════════════════════════
 
 RAINFALL OBSERVATION DATA:
@@ -95,8 +95,8 @@ ${liveData.map(c =>
 ).join('\n')}
 ─────────────────────────────────────────────
 
-STATUS: Pre-monsoon season.
-Monsoon onset expected: 10-15 June 2026 (Normal Date: 12 June)
+STATUS: Active Monsoon season.
+Monsoon has set in across the Vidarbha region. Regular daily rainfall observations are being monitored and logged.
 
 ─────────────────────────────────────────────
 Source: RMC Nagpur | www.imdnagpur.gov.in
