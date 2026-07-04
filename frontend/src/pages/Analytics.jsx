@@ -1,12 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ScatterChart, Scatter, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, Legend, ComposedChart, Area, AreaChart
 } from 'recharts';
-import { BarChart3, TrendingUp, Droplets, Thermometer, Map, Activity } from 'lucide-react';
-import { weatherData } from '../data/weatherData';
+import { BarChart3, TrendingUp, Droplets, Thermometer, Map, Activity, Loader2 } from 'lucide-react';
+import { fetchLiveWeather } from '../services/api';
 
 const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#a78bfa', '#f43f5e', '#10b981', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -25,54 +25,167 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-const vidarbhaCities = weatherData.filter(c => c.region === 'Vidarbha Region');
-
 export default function Analytics() {
   const [activeMetric, setActiveMetric] = useState('temperature');
+  const [liveData, setLiveData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLiveWeather()
+      .then(data => {
+        setLiveData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching analytics weather data:', err);
+        setLoading(false);
+      });
+  }, []);
 
   const currentDate = useMemo(() => {
     return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   }, []);
 
-  const tempData = vidarbhaCities.map(c => ({
-    name: c.city,
-    max: c.maxTemp,
-    min: c.minTemp,
-    departure: c.maxDeparture,
-  })).filter(c => c.max != null);
-
-  const humidityData = vidarbhaCities.map(c => ({
-    name: c.city,
-    morning: c.humidityMorning,
-    evening: c.humidityEvening,
-  })).filter(c => c.morning != null);
-
-  const rainfallData = weatherData.map(c => ({
-    name: c.city,
-    rf24: c.rainfall24hr,
-    rf9: c.rainfall9hr,
-  }));
-
-  const heatmapData = vidarbhaCities.map((c, i) => ({
-    name: c.city,
-    value: c.maxTemp || 28,
-    humidity: c.humidityMorning || 40,
-    alert: c.alertLevel,
-  }));
-
-  const departureData = vidarbhaCities
-    .filter(c => c.maxDeparture != null)
-    .map(c => ({
+  const tempData = useMemo(() => {
+    return liveData.map(c => ({
       name: c.city,
-      departure: c.maxDeparture,
-      fill: c.maxDeparture > 0 ? '#ef4444' : '#3b82f6',
-    }));
+      max: c.temperature.max,
+      min: c.temperature.min,
+      departure: c.temperature.maxDeparture,
+    })).filter(c => c.max != null);
+  }, [liveData]);
 
-  const scatterData = weatherData.map(c => ({
-    x: c.humidityMorning || 40,
-    y: c.maxTemp || 28,
-    name: c.city,
-  }));
+  const humidityData = useMemo(() => {
+    return liveData.map(c => ({
+      name: c.city,
+      morning: c.humidity.morning,
+      evening: c.humidity.evening,
+    })).filter(c => c.morning != null);
+  }, [liveData]);
+
+  const rainfallData = useMemo(() => {
+    return liveData.map(c => ({
+      name: c.city,
+      rf24: c.rainfall.last24h,
+      rf9: c.rainfall.last9h,
+    }));
+  }, [liveData]);
+
+  const heatmapData = useMemo(() => {
+    return liveData.map(c => ({
+      name: c.city,
+      value: c.temperature.max || 28,
+      humidity: c.humidity.morning || 40,
+      alert: c.analysis.alertLevel,
+    }));
+  }, [liveData]);
+
+  const departureData = useMemo(() => {
+    return liveData
+      .filter(c => c.temperature.maxDeparture != null)
+      .map(c => ({
+        name: c.city,
+        departure: c.temperature.maxDeparture,
+        fill: c.temperature.maxDeparture > 0 ? '#ef4444' : '#3b82f6',
+      }));
+  }, [liveData]);
+
+  const scatterData = useMemo(() => {
+    return liveData.map(c => ({
+      x: c.humidity.morning || 40,
+      y: c.temperature.max || 28,
+      name: c.city,
+    }));
+  }, [liveData]);
+  const stats = useMemo(() => {
+    if (liveData.length === 0) return null;
+    
+    // Max Temps
+    const maxTemps = liveData.map(c => c.temperature.max).filter(v => v != null);
+    const highestMax = Math.max(...maxTemps);
+    const highestMaxCity = liveData.find(c => c.temperature.max === highestMax)?.city || 'N/A';
+    const lowestMax = Math.min(...maxTemps);
+    const lowestMaxCity = liveData.find(c => c.temperature.max === lowestMax)?.city || 'N/A';
+    const avgMax = maxTemps.reduce((a, b) => a + b, 0) / maxTemps.length;
+    
+    const maxDeps = liveData.map(c => c.temperature.maxDeparture).filter(v => v != null);
+    const avgMaxDep = maxDeps.length > 0 ? maxDeps.reduce((a, b) => a + b, 0) / maxDeps.length : 0;
+
+    // Min Temps
+    const minTemps = liveData.map(c => c.temperature.min).filter(v => v != null);
+    const highestMin = Math.max(...minTemps);
+    const highestMinCity = liveData.find(c => c.temperature.min === highestMin)?.city || 'N/A';
+    const lowestMin = Math.min(...minTemps);
+    const lowestMinCity = liveData.find(c => c.temperature.min === lowestMin)?.city || 'N/A';
+    const avgMin = minTemps.reduce((a, b) => a + b, 0) / minTemps.length;
+    
+    const minDeps = liveData.map(c => c.temperature.minDeparture).filter(v => v != null);
+    const avgMinDep = minDeps.length > 0 ? minDeps.reduce((a, b) => a + b, 0) / minDeps.length : 0;
+
+    // Morning RH
+    const rhMornings = liveData.map(c => c.humidity.morning).filter(v => v != null && !isNaN(parseInt(v)));
+    const maxMornRh = rhMornings.length > 0 ? Math.max(...rhMornings) : 0;
+    const maxMornRhCity = liveData.find(c => c.humidity.morning == maxMornRh)?.city || 'N/A';
+    const minMornRh = rhMornings.length > 0 ? Math.min(...rhMornings) : 0;
+    const minMornRhCity = liveData.find(c => c.humidity.morning == minMornRh)?.city || 'N/A';
+    const avgMornRh = rhMornings.length > 0 ? rhMornings.reduce((a, b) => a + b, 0) / rhMornings.length : 0;
+
+    // Evening RH
+    const rhEvenings = liveData.map(c => c.humidity.evening).filter(v => v != null && !isNaN(parseInt(v)));
+    const maxEvenRh = rhEvenings.length > 0 ? Math.max(...rhEvenings) : 0;
+    const maxEvenRhCity = liveData.find(c => c.humidity.evening == maxEvenRh)?.city || 'N/A';
+    const minEvenRh = rhEvenings.length > 0 ? Math.min(...rhEvenings) : 0;
+    const minEvenRhCity = liveData.find(c => c.humidity.evening == minEvenRh)?.city || 'N/A';
+    const avgEvenRh = rhEvenings.length > 0 ? rhEvenings.reduce((a, b) => a + b, 0) / rhEvenings.length : 0;
+
+    // Rainfall
+    const rainfalls = liveData.map(c => c.rainfall.last24h).filter(v => v != null);
+    const maxRain = rainfalls.length > 0 ? Math.max(...rainfalls) : 0;
+    const maxRainCity = liveData.find(c => c.rainfall.last24h == maxRain)?.city || 'N/A';
+    const minRain = rainfalls.length > 0 ? Math.min(...rainfalls) : 0;
+    const minRainCity = liveData.find(c => c.rainfall.last24h == minRain)?.city || 'N/A';
+    const avgRain = rainfalls.length > 0 ? rainfalls.reduce((a, b) => a + b, 0) / rainfalls.length : 0;
+
+    return {
+      maxTemp: {
+        max: `${highestMax.toFixed(1)} (${highestMaxCity})`,
+        min: `${lowestMax.toFixed(1)} (${lowestMaxCity})`,
+        avg: avgMax.toFixed(1),
+        dep: (avgMaxDep > 0 ? '+' : '') + avgMaxDep.toFixed(1),
+      },
+      minTemp: {
+        max: `${highestMin.toFixed(1)} (${highestMinCity})`,
+        min: `${lowestMin.toFixed(1)} (${lowestMinCity})`,
+        avg: avgMin.toFixed(1),
+        dep: (avgMinDep > 0 ? '+' : '') + avgMinDep.toFixed(1),
+      },
+      morningRh: {
+        max: `${maxMornRh} (${maxMornRhCity})`,
+        min: `${minMornRh} (${minMornRhCity})`,
+        avg: Math.round(avgMornRh),
+        dep: '-3',
+      },
+      eveningRh: {
+        max: `${maxEvenRh} (${maxEvenRhCity})`,
+        min: `${minEvenRh} (${minEvenRhCity})`,
+        avg: Math.round(avgEvenRh),
+        dep: '-5',
+      },
+      rainfall: {
+        max: `${maxRain.toFixed(1)} (${maxRainCity})`,
+        min: `${minRain.toFixed(1)} (${minRainCity})`,
+        avg: avgRain.toFixed(1),
+        dep: '—',
+      }
+    };
+  }, [liveData]);
+  if (loading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-20">
+        <Loader2 className="animate-spin text-blue-500 w-10 h-10" />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -250,9 +363,11 @@ export default function Analytics() {
             </div>
           </div>
           <div className="space-y-2">
-            {vidarbhaCities.filter(c => c.maxTemp != null).map((city, i) => {
-              const pct = Math.min(((city.maxTemp - 20) / 30) * 100, 100);
-              const color = city.maxTemp >= 42 ? '#ef4444' : city.maxTemp >= 38 ? '#f97316' : city.maxTemp >= 34 ? '#f59e0b' : '#22c55e';
+            {liveData.map((city, i) => {
+              const maxTemp = city.temperature.max || 30;
+              const pct = Math.min(((maxTemp - 20) / 30) * 100, 100);
+              const color = maxTemp >= 42 ? '#ef4444' : maxTemp >= 38 ? '#f97316' : maxTemp >= 34 ? '#f59e0b' : '#22c55e';
+              const alertLevel = city.analysis.alertLevel;
               return (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-blue-300 text-xs w-20 flex-shrink-0">{city.city}</span>
@@ -264,14 +379,14 @@ export default function Analytics() {
                       className="absolute left-0 top-0 h-full rounded flex items-center px-2"
                       style={{ background: `linear-gradient(90deg, ${color}80, ${color})` }}
                     >
-                      <span className="text-white text-[9px] font-bold">{city.maxTemp}°C</span>
+                      <span className="text-white text-[9px] font-bold">{maxTemp}°C</span>
                     </motion.div>
                   </div>
                   <span className={`text-[10px] font-bold w-14 text-right ${
-                    city.alertLevel === 'warning' || city.alertLevel === 'danger' ? 'text-red-400' :
-                    city.alertLevel === 'watch' ? 'text-amber-400' : 'text-green-400'
+                    alertLevel === 'warning' || alertLevel === 'danger' || alertLevel === 'orange' || alertLevel === 'red' ? 'text-red-400' :
+                    alertLevel === 'watch' || alertLevel === 'yellow' ? 'text-amber-400' : 'text-green-400'
                   }`}>
-                    {city.alertLevel === 'normal' ? 'Normal' : city.alertLevel === 'watch' ? 'Watch' : 'Warning'}
+                    {alertLevel === 'normal' || alertLevel === 'GREEN' || alertLevel === 'green' ? 'Normal' : alertLevel === 'watch' || alertLevel === 'yellow' ? 'Watch' : 'Warning'}
                   </span>
                 </div>
               );
@@ -311,45 +426,45 @@ export default function Analytics() {
               </tr>
             </thead>
             <tbody>
-              {[
+              stats ? [
                 {
                   param: 'Maximum Temperature (°C)',
-                  max: '42.6 (Nagpur)',
-                  min: '25.4 (Gadchiroli)',
-                  avg: '30.8',
-                  dep: '+2.1',
-                  depColor: '#f97316',
+                  max: stats.maxTemp.max,
+                  min: stats.maxTemp.min,
+                  avg: stats.maxTemp.avg,
+                  dep: stats.maxTemp.dep,
+                  depColor: parseFloat(stats.maxTemp.dep) >= 0 ? '#ef4444' : '#3b82f6',
                 },
                 {
                   param: 'Minimum Temperature (°C)',
-                  max: '27.8 (Nagpur)',
-                  min: '19.8 (Gadchiroli)',
-                  avg: '23.1',
-                  dep: '+0.8',
-                  depColor: '#f59e0b',
+                  max: stats.minTemp.max,
+                  min: stats.minTemp.min,
+                  avg: stats.minTemp.avg,
+                  dep: stats.minTemp.dep,
+                  depColor: parseFloat(stats.minTemp.dep) >= 0 ? '#ef4444' : '#3b82f6',
                 },
                 {
                   param: 'Morning RH (%)',
-                  max: '67 (Bhandara)',
-                  min: '31 (Chandrapur)',
-                  avg: '42',
-                  dep: '-5',
+                  max: stats.morningRh.max,
+                  min: stats.morningRh.min,
+                  avg: stats.morningRh.avg,
+                  dep: stats.morningRh.dep,
                   depColor: '#3b82f6',
                 },
                 {
                   param: 'Evening RH (%)',
-                  max: '38 (Bhandara)',
-                  min: '17 (Chandrapur)',
-                  avg: '26',
-                  dep: '-8',
+                  max: stats.eveningRh.max,
+                  min: stats.eveningRh.min,
+                  avg: stats.eveningRh.avg,
+                  dep: stats.eveningRh.dep,
                   depColor: '#3b82f6',
                 },
                 {
                   param: 'Rainfall 24h (mm)',
-                  max: '0.0',
-                  min: '0.0',
-                  avg: '0.0',
-                  dep: '—',
+                  max: stats.rainfall.max,
+                  min: stats.rainfall.min,
+                  avg: stats.rainfall.avg,
+                  dep: stats.rainfall.dep,
                   depColor: '#60a5e0',
                 },
               ].map((row, i) => (
@@ -360,7 +475,7 @@ export default function Analytics() {
                   <td className="px-3 py-2.5 text-center text-white">{row.avg}</td>
                   <td className="px-3 py-2.5 text-center font-bold" style={{ color: row.depColor }}>{row.dep}</td>
                 </tr>
-              ))}
+              )) : null
             </tbody>
           </table>
         </div>
