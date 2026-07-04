@@ -295,7 +295,7 @@ function Header({ onMenuClick }) {
       </div>
 
       {/* ═══ DARK BLUE NAV BAR ═══ */}
-      <div style={{
+      <div className="header-nav-bar" style={{
         backgroundColor: '#003366',
         borderTop: '2px solid #333',
         borderBottom: '2px solid #333',

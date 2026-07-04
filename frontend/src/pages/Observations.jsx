@@ -636,7 +636,7 @@ export default function Observations({
       {/* Main content area — shrinks when panel is open */}
       <div
         className="flex-1 p-4 md:p-6 pb-32 transition-all duration-300 relative z-10 observations-main"
-        style={{ marginRight: selectedCity ? 420 : 0, background: isDarkMode ? '#050d1a' : '#f4f7fc' }}
+        style={{ marginRight: selectedCity ? 420 : 0, background: isDarkMode ? '#050d1a' : 'transparent' }}
       >
         {/* Header */}
         <div className="mb-5">

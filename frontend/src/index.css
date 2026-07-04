@@ -243,8 +243,9 @@ body {
    Reports, Chatbot, Admin
    ========================================= */
 .light-mode {
-  background: #f4f7fc !important;
-  color: #1a2b3c;
+  background: url('/images/light_bg.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+  color: #1e293b !important;
 }
 
 /* Base resets for light mode */
@@ -473,9 +474,24 @@ body {
    HEADER / NAV BAR LIGHT MODE
    ═══════════════════════════════════════════ */
 
-/* The dark-blue nav bar */
+/* The dark-blue nav bar overrides */
 .light-mode .header-nav-bar {
   background-color: #003366 !important; /* Keep official dark blue */
+}
+.light-mode .header-nav-bar a,
+.light-mode .header-nav-bar span {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.light-mode .header-nav-bar a:hover {
+  background-color: #1a4a82 !important;
+  color: #ffffff !important;
+}
+.light-mode .header-nav-bar .nav-active {
+  background-color: #1a4a82 !important;
+  color: #ffffff !important;
+}
+.light-mode .header-nav-bar .text-yellow-300 {
+  color: #fde047 !important;
 }
 
 /* Alert ticker — premium soft light alert background */
