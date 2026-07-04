@@ -787,13 +787,13 @@ export const weatherData = [
 ];
 
 export const alertTicker = [
-  '🔴 HEATWAVE WARNING: Wardha, Chandrapur districts — Temperatures likely to exceed 44°C on 22-23 May 2026',
-  '🟠 HEATWAVE WATCH: Nagpur, Aurangabad, Raipur — Maximum temperatures 2-3°C above normal expected',
-  '🟡 Pre-Monsoon Activity: Gadchiroli, Bhandara, Gondia districts may receive thunderstorms/lightning on 23-24 May 2026',
-  '🟢 Normal Weather: Amravati, Buldana, Washim districts — No major weather event expected in next 48 hours',
-  '⚡ Lightning Alert: Isolated thunderstorm activity likely over East Vidarbha on 23 May 2026 evening',
-  '🌧️ Rainfall Advisory: Pre-monsoon showers expected to begin in southern Maharashtra districts from 25 May 2026',
-  '☀️ UV Index Alert: Very High UV levels (9-10) across Vidarbha — Use sun protection 10 AM to 4 PM IST',
+  '🔴 HEAVY RAIN WARNING: Nagpur, Chandrapur districts — Rainfall likely to exceed 64.5 mm in the next 24 hours',
+  '🟠 MONSOON ALERT: Bhandara, Gondia, Gadchiroli — Heavy rainfall (35.5 - 64.5 mm) expected over the next 48 hours',
+  '🟡 Thunderstorm Warning: Akola, Amravati, Buldana districts may receive lightning and moderate rain in the next 24 hours',
+  '🟢 Normal Weather: Washim, Yavatmal districts — No extreme weather events expected in the next 48 hours',
+  '⚡ Lightning Alert: Isolated thunderstorm and lightning activity likely over East Vidarbha in the next 24 hours',
+  '🌧️ Rainfall Advisory: Active monsoon conditions expected to continue across all Vidarbha districts over the next 48 hours',
+  '☀️ UV Index Alert: Moderate UV levels (5-6) across Vidarbha due to cloud cover — Standard precautions advised',
 ];
 
 export const regionalSummary = {
