@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { motion } from 'framer-motion';
 import {
   AreaChart, Area, LineChart, Line, BarChart, Bar, RadialBarChart, RadialBar,
@@ -110,6 +111,7 @@ function formatDayName(dateStr) {
 }
 
 export default function Dashboard() {
+  const { isDarkMode } = useTheme();
   const [liveData, setLiveData] = useState([]);
   const [loading, setLoading] = useState(true);
 
