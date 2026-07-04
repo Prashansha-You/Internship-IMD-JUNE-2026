@@ -238,11 +238,24 @@ async function scrapeObservations() {
         ? parseRainfallValue(cells.eq(COL.rfSince09hrs).text())
         : null;
 
+      const maxTemp = parseFloat(cells.eq(1).text().trim());
+      const maxTempDep = parseFloat(cells.eq(3).text().trim());
+      const minTemp = parseFloat(cells.eq(4).text().trim());
+      const minTempDep = parseFloat(cells.eq(6).text().trim());
+      const humidityMorning = parseInt(cells.eq(7).text().trim());
+      const humidityEvening = parseInt(cells.eq(8).text().trim());
+
       records.push({
         date: observationDate,
         station: stationName,
         rainfall_mm: rf24hrs,
         rf_since_09hrs: rfSince09hrs,
+        max_temp: isNaN(maxTemp) ? null : maxTemp,
+        max_temp_dep: isNaN(maxTempDep) ? null : maxTempDep,
+        min_temp: isNaN(minTemp) ? null : minTemp,
+        min_temp_dep: isNaN(minTempDep) ? null : minTempDep,
+        humidity_morning: isNaN(humidityMorning) ? null : humidityMorning,
+        humidity_evening: isNaN(humidityEvening) ? null : humidityEvening,
         source: 'imd_scrape',
       });
     });
