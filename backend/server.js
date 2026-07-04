@@ -41,7 +41,7 @@ const random = (min, max, decimals = 1) => {
 // Helper to get random array element
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-// Generate dynamic weather data based on realistic summer conditions in Vidarbha
+// Generate dynamic weather data based on realistic monsoon conditions in Vidarbha
 const generateWeatherData = () => {
   // Fetch actual rainfall records for the latest date in the database
   const latestDbDate = rainfallDb.getLatestDate();
@@ -49,21 +49,27 @@ const generateWeatherData = () => {
   const targetRecords = latestDbDate ? rainfallDb.getRecords().filter(r => r.date === targetDateStr) : [];
 
   return cities.map(city => {
-    // Vidarbha summer temps are typically 40-47°C Max, 25-32°C Min
-    const maxTemp = random(40.5, 47.5);
-    const minTemp = random(26.0, 32.5);
-    const maxChange = random(-2.5, 3.5);
-    const minChange = random(-1.5, 2.5);
-    const maxDeparture = random(-1.0, 5.0);
-    const minDeparture = random(-1.0, 4.0);
+    // Vidarbha monsoon temps are typically 27-32°C Max, 22-26°C Min
+    const maxTemp = random(27.5, 31.5);
+    const minTemp = random(22.0, 25.5);
+    const maxChange = random(-1.5, 1.5);
+    const minChange = random(-1.0, 1.0);
+    const maxDeparture = random(-1.5, 1.5);
+    const minDeparture = random(-1.0, 1.0);
     
-    // Humidity is lower in summer (15-50%)
-    const humidity830 = Math.floor(random(25, 60, 0));
-    const humidity1730 = Math.floor(random(15, 40, 0));
+    // Humidity is very high during monsoon (70-98%)
+    const humidity830 = Math.floor(random(85, 98, 0));
+    const humidity1730 = Math.floor(random(70, 90, 0));
     
-    // Map rainfall to actual database records for targetDateStr if available
+    // Map rainfall to actual database records for targetDateStr if available (robust match)
     const cityLower = city.toLowerCase();
-    const dbRecord = targetRecords.find(r => getDistrict(r.station).toLowerCase() === cityLower);
+    const dbRecord = targetRecords.find(r => {
+      const stationName = r.station.toLowerCase();
+      const districtName = getDistrict(r.station).toLowerCase();
+      return stationName === cityLower || 
+             districtName === cityLower || 
+             (cityLower === 'brahmpuri' && (stationName.includes('bramhapuri') || stationName.includes('brahmapuri')));
+    });
     
     const rain24 = dbRecord && dbRecord.rainfall_mm !== null ? dbRecord.rainfall_mm : 0.0;
     const rain9 = dbRecord && dbRecord.rf_since_09hrs !== null ? dbRecord.rf_since_09hrs : 0.0;
@@ -122,15 +128,22 @@ app.get('/api/weather', async (req, res) => {
     if (scrapeResult && scrapeResult.success && scrapeResult.records.length > 0) {
       const mappedData = cities.map(city => {
         const cityLower = city.toLowerCase();
-        const rec = scrapeResult.records.find(r => getDistrict(r.station).toLowerCase() === cityLower);
+        // Robust match station by name, district, or spelling variations
+        const rec = scrapeResult.records.find(r => {
+          const stationName = r.station.toLowerCase();
+          const districtName = getDistrict(r.station).toLowerCase();
+          return stationName === cityLower || 
+                 districtName === cityLower || 
+                 (cityLower === 'brahmpuri' && (stationName.includes('bramhapuri') || stationName.includes('brahmapuri')));
+        });
         
         if (rec) {
-          const maxTemp = rec.max_temp !== null ? rec.max_temp : random(40.5, 47.5);
-          const minTemp = rec.min_temp !== null ? rec.min_temp : random(26.0, 32.5);
-          const maxDeparture = rec.max_temp_dep !== null ? rec.max_temp_dep : random(-1.0, 5.0);
-          const minDeparture = rec.min_temp_dep !== null ? rec.min_temp_dep : random(-1.0, 4.0);
-          const humidity830 = rec.humidity_morning !== null ? rec.humidity_morning : Math.floor(random(25, 60, 0));
-          const humidity1730 = rec.humidity_evening !== null ? rec.humidity_evening : Math.floor(random(15, 40, 0));
+          const maxTemp = rec.max_temp !== null ? rec.max_temp : Number(random(27.5, 31.5).toFixed(1));
+          const minTemp = rec.min_temp !== null ? rec.min_temp : Number(random(22.0, 25.5).toFixed(1));
+          const maxDeparture = rec.max_temp_dep !== null ? rec.max_temp_dep : Number(random(-1.5, 1.5).toFixed(1));
+          const minDeparture = rec.min_temp_dep !== null ? rec.min_temp_dep : Number(random(-1.0, 1.0).toFixed(1));
+          const humidity830 = rec.humidity_morning !== null ? rec.humidity_morning : Math.floor(random(85, 98, 0));
+          const humidity1730 = rec.humidity_evening !== null ? rec.humidity_evening : Math.floor(random(70, 90, 0));
           const rain24 = rec.rainfall_mm !== null ? rec.rainfall_mm : 0.0;
           const rain9 = rec.rf_since_09hrs !== null ? rec.rf_since_09hrs : 0.0;
           
