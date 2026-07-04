@@ -137,27 +137,81 @@ app.get('/api/forecast10', (req, res) => {
   const city = req.query.city || 'Nagpur';
   
   try {
-    const data = getPreviousRainfall(city, 10);
+    // Fetch all records from our persistent JSON database
+    const allRecords = rainfallDb.getRecords();
     
-    if (data && data.length > 0) {
+    // Filter records matching the requested city/district
+    const cityLower = city.toLowerCase();
+    const cityRecords = allRecords.filter(r => getDistrict(r.station).toLowerCase() === cityLower);
+    
+    // Group by date and calculate average rainfall
+    const dateMap = {};
+    for (const rec of cityRecords) {
+      if (!dateMap[rec.date]) {
+        dateMap[rec.date] = {
+          rainfall_mm: rec.rainfall_mm !== null ? rec.rainfall_mm : 0,
+          count: rec.rainfall_mm !== null ? 1 : 0
+        };
+      } else {
+        if (rec.rainfall_mm !== null) {
+          dateMap[rec.date].rainfall_mm += rec.rainfall_mm;
+          dateMap[rec.date].count++;
+        }
+      }
+    }
+    
+    // Sort dates ascending for the chart (oldest first)
+    const sortedDates = Object.keys(dateMap).sort();
+    
+    // Take the last 10 days of available data (e.g., June 29 to today)
+    const targetDates = sortedDates.slice(-10);
+    
+    const data = targetDates.map(dateStr => {
+      const dateObj = new Date(dateStr + 'T00:00:00');
+      const val = dateMap[dateStr];
+      const avgRainfall = val.count > 0 ? Number((val.rainfall_mm / val.count).toFixed(1)) : 0;
+      
+      let condition, icon;
+      if (avgRainfall === 0) { condition = 'Dry'; icon = '☀️'; }
+      else if (avgRainfall <= 2.5) { condition = 'Light Rain'; icon = '🌦️'; }
+      else if (avgRainfall <= 7.5) { condition = 'Moderate Rain'; icon = '🌧️'; }
+      else if (avgRainfall <= 35.5) { condition = 'Heavy Rain'; icon = '🌧️'; }
+      else if (avgRainfall <= 64.5) { condition = 'Very Heavy Rain'; icon = '⛈️'; }
+      else { condition = 'Extremely Heavy Rain'; icon = '⛈️'; }
+      
+      return {
+        date: dateStr,
+        dayName: dateObj.toLocaleDateString('en-IN', { weekday: 'short' }),
+        dayFull: dateObj.toLocaleDateString('en-IN', { weekday: 'long' }),
+        dateFormatted: dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+        day: dateObj.getDate(),
+        actualRainfall: avgRainfall,
+        expectedRainfall: avgRainfall,
+        rainProbability: avgRainfall > 0 ? 100 : 0,
+        condition,
+        icon,
+        isActualData: true,
+      };
+    });
+    
+    if (data.length > 0) {
       res.json({
         success: true,
         city: city,
-        source: 'IMD Excel Data (Real Readings)',
+        source: 'IMD Persistent Database (Scraped & Backfilled)',
         data: data,
       });
     } else {
-      // Return empty with message if no data found
       res.json({
         success: true,
         city: city,
-        source: 'No IMD data available',
+        source: 'No IMD data available in database',
         data: [],
       });
     }
   } catch (error) {
-    console.error('Error fetching rainfall data:', error);
-    res.status(500).json({ success: false, error: 'Failed to parse rainfall data' });
+    console.error('Error fetching rainfall history:', error);
+    res.status(500).json({ success: false, error: 'Failed to query rainfall database' });
   }
 });
 
