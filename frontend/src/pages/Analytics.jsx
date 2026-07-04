@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   ScatterChart, Scatter, BarChart, Bar, LineChart, Line,
@@ -29,6 +29,10 @@ const vidarbhaCities = weatherData.filter(c => c.region === 'Vidarbha Region');
 
 export default function Analytics() {
   const [activeMetric, setActiveMetric] = useState('temperature');
+
+  const currentDate = useMemo(() => {
+    return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  }, []);
 
   const tempData = vidarbhaCities.map(c => ({
     name: c.city,
@@ -122,7 +126,7 @@ export default function Analytics() {
                 {activeMetric === 'rainfall' && 'Rainfall Distribution (24h & 9h)'}
                 {activeMetric === 'departure' && 'Temperature Departure from Normal'}
               </h3>
-              <p className="text-blue-400 text-xs">21 May 2026 — Observed data</p>
+              <p className="text-blue-400 text-xs">{currentDate} — Observed data</p>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
@@ -293,7 +297,7 @@ export default function Analytics() {
       >
         <h3 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
           <BarChart3 size={16} className="text-cyan-400" />
-          Statistical Summary — Vidarbha Region (21 May 2026)
+          Statistical Summary — Vidarbha Region ({currentDate})
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
