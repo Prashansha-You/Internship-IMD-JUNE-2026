@@ -508,6 +508,24 @@ function exportToExcel(startDate, endDate) {
   })];
   wsMatrixData.push(headerRow);
 
+  // Time row: Add the latest update time under each date header in local IST
+  const timeRow = ['Last Updated (IST)'];
+  for (const d of uniqueDates) {
+    const dateRecs = data.filter(r => r.date === d && r.updatedAt);
+    if (dateRecs.length > 0) {
+      const latestUpdate = dateRecs.reduce((latest, r) => r.updatedAt > latest ? r.updatedAt : latest, '');
+      try {
+        const dateObj = new Date(latestUpdate);
+        timeRow.push(dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }));
+      } catch {
+        timeRow.push('—');
+      }
+    } else {
+      timeRow.push('—');
+    }
+  }
+  wsMatrixData.push(timeRow);
+
   // Data rows
   for (const station of uniqueStations) {
     const row = [station];
@@ -524,7 +542,7 @@ function exportToExcel(startDate, endDate) {
   // Set column widths: first column wider for station names, rest standard width
   wsMatrix['!cols'] = [
     { wch: 25 }, // Station Name
-    ...uniqueDates.map(() => ({ wch: 10 })) // Date columns
+    ...uniqueDates.map(() => ({ wch: 15 })) // Date columns (slightly wider for time formatting)
   ];
 
   XLSX.utils.book_append_sheet(wb, wsMatrix, 'Rainfall Summary Matrix');
@@ -539,7 +557,7 @@ function exportToExcel(startDate, endDate) {
   wsRawData.push([]);
 
   // Header row
-  wsRawData.push(['Date', 'Station Name', 'Rainfall (mm)', 'RF Since 09hrs (mm)', 'Data Source', 'Last Updated']);
+  wsRawData.push(['Date', 'Station Name', 'Rainfall (mm)', 'RF Since 09hrs (mm)', 'Data Source', 'Last Updated (IST)']);
 
   // Data rows — sorted chronologically (oldest first for the export)
   const sortedData = [...data].sort((a, b) => {
@@ -549,13 +567,21 @@ function exportToExcel(startDate, endDate) {
   });
 
   for (const rec of sortedData) {
+    let formattedTime = rec.updatedAt;
+    try {
+      if (rec.updatedAt) {
+        const dateObj = new Date(rec.updatedAt);
+        formattedTime = dateObj.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+    } catch {}
+
     wsRawData.push([
       rec.date,
       rec.station,
       rec.rainfall_mm !== null ? rec.rainfall_mm : '',
       rec.rf_since_09hrs !== null ? rec.rf_since_09hrs : '',
       rec.source,
-      rec.updatedAt,
+      formattedTime,
     ]);
   }
 
@@ -568,7 +594,7 @@ function exportToExcel(startDate, endDate) {
     { wch: 14 },  // Rainfall
     { wch: 18 },  // RF Since 09hrs
     { wch: 16 },  // Source
-    { wch: 24 },  // Last Updated
+    { wch: 26 },  // Last Updated
   ];
 
   XLSX.utils.book_append_sheet(wb, wsRaw, 'Raw Data Records');
