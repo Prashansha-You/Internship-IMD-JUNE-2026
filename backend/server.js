@@ -42,6 +42,11 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 // Generate dynamic weather data based on realistic summer conditions in Vidarbha
 const generateWeatherData = () => {
+  // Fetch actual rainfall records for the latest date in the database
+  const latestDbDate = rainfallDb.getLatestDate();
+  const targetDateStr = latestDbDate || new Date().toISOString().split('T')[0];
+  const targetRecords = latestDbDate ? rainfallDb.getRecords().filter(r => r.date === targetDateStr) : [];
+
   return cities.map(city => {
     // Vidarbha summer temps are typically 40-47°C Max, 25-32°C Min
     const maxTemp = random(40.5, 47.5);
@@ -55,10 +60,12 @@ const generateWeatherData = () => {
     const humidity830 = Math.floor(random(25, 60, 0));
     const humidity1730 = Math.floor(random(15, 40, 0));
     
-    // Rainfall is mostly 0 during summer, but occasional pre-monsoon/monsoon showers
-    const rainChance = Math.random();
-    const rain24 = rainChance > 0.70 ? Number(random(1.0, 75.0).toFixed(1)) : 0.0;
-    const rain9 = rain24 > 0 ? Number(random(0.5, rain24 * 0.7).toFixed(1)) : 0.0;
+    // Map rainfall to actual database records for targetDateStr if available
+    const cityLower = city.toLowerCase();
+    const dbRecord = targetRecords.find(r => getDistrict(r.station).toLowerCase() === cityLower);
+    
+    const rain24 = dbRecord && dbRecord.rainfall_mm !== null ? dbRecord.rainfall_mm : 0.0;
+    const rain9 = dbRecord && dbRecord.rf_since_09hrs !== null ? dbRecord.rf_since_09hrs : 0.0;
     
     // Derived values for analytics and UI
     const isHeatwave = maxTemp >= 45.0;
