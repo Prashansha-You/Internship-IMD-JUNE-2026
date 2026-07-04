@@ -473,17 +473,73 @@ function importFromExcel(filePath) {
 function exportToExcel(startDate, endDate) {
   const data = getRecords(startDate, endDate);
 
+  // Get unique dates sorted chronologically (oldest to newest)
+  const uniqueDates = [...new Set(data.map(r => r.date))].sort();
+
+  // Get unique stations sorted alphabetically
+  const uniqueStations = [...new Set(data.map(r => r.station))].sort();
+
+  // Create a map of station+date to rainfall value for fast lookup
+  const rainfallMap = {};
+  for (const rec of data) {
+    const key = `${rec.station}|${rec.date}`;
+    rainfallMap[key] = rec.rainfall_mm;
+  }
+
   const wb = XLSX.utils.book_new();
-  const wsData = [];
+
+  // ── Sheet 1: Matrix Summary ───────────────────────────────
+  const wsMatrixData = [];
 
   // Title rows
-  wsData.push(['RAINFALL DATABASE — RMC Nagpur (IMD)']);
-  wsData.push([`Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`]);
-  wsData.push([`Total Records: ${data.length}`]);
-  wsData.push([]);
+  wsMatrixData.push(['RAINFALL SUMMARY MATRIX — RMC Nagpur (IMD)']);
+  wsMatrixData.push([`Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`]);
+  wsMatrixData.push([`Total Stations: ${uniqueStations.length} · Dates covered: ${uniqueDates[0] || '—'} to ${uniqueDates[uniqueDates.length - 1] || '—'}`]);
+  wsMatrixData.push([]);
+
+  // Header row: Station Name followed by formatted dates (e.g. 29-Jun)
+  const headerRow = ['Station Name', ...uniqueDates.map(d => {
+    try {
+      const dateObj = new Date(d + 'T00:00:00');
+      return dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    } catch {
+      return d;
+    }
+  })];
+  wsMatrixData.push(headerRow);
+
+  // Data rows
+  for (const station of uniqueStations) {
+    const row = [station];
+    for (const date of uniqueDates) {
+      const key = `${station}|${date}`;
+      const rf = rainfallMap[key];
+      row.push(rf !== undefined && rf !== null ? rf : '');
+    }
+    wsMatrixData.push(row);
+  }
+
+  const wsMatrix = XLSX.utils.aoa_to_sheet(wsMatrixData);
+
+  // Set column widths: first column wider for station names, rest standard width
+  wsMatrix['!cols'] = [
+    { wch: 25 }, // Station Name
+    ...uniqueDates.map(() => ({ wch: 10 })) // Date columns
+  ];
+
+  XLSX.utils.book_append_sheet(wb, wsMatrix, 'Rainfall Summary Matrix');
+
+  // ── Sheet 2: Raw Records ──────────────────────────────────
+  const wsRawData = [];
+
+  // Title rows
+  wsRawData.push(['RAINFALL FLAT DATABASE RECORDS — RMC Nagpur (IMD)']);
+  wsRawData.push([`Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`]);
+  wsRawData.push([`Total Records: ${data.length}`]);
+  wsRawData.push([]);
 
   // Header row
-  wsData.push(['Date', 'Station Name', 'Rainfall (mm)', 'RF Since 09hrs (mm)', 'Data Source', 'Last Updated']);
+  wsRawData.push(['Date', 'Station Name', 'Rainfall (mm)', 'RF Since 09hrs (mm)', 'Data Source', 'Last Updated']);
 
   // Data rows — sorted chronologically (oldest first for the export)
   const sortedData = [...data].sort((a, b) => {
@@ -493,7 +549,7 @@ function exportToExcel(startDate, endDate) {
   });
 
   for (const rec of sortedData) {
-    wsData.push([
+    wsRawData.push([
       rec.date,
       rec.station,
       rec.rainfall_mm !== null ? rec.rainfall_mm : '',
@@ -503,10 +559,10 @@ function exportToExcel(startDate, endDate) {
     ]);
   }
 
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wsRaw = XLSX.utils.aoa_to_sheet(wsRawData);
 
   // Set column widths
-  ws['!cols'] = [
+  wsRaw['!cols'] = [
     { wch: 12 },  // Date
     { wch: 25 },  // Station Name
     { wch: 14 },  // Rainfall
@@ -515,7 +571,7 @@ function exportToExcel(startDate, endDate) {
     { wch: 24 },  // Last Updated
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Rainfall Data');
+  XLSX.utils.book_append_sheet(wb, wsRaw, 'Raw Data Records');
 
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
