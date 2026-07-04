@@ -639,9 +639,27 @@ function backfillMissingDates() {
 function initialize(excelPath) {
   loadDb();
 
+  // Remove records between 2026-06-01 and 2026-06-28 inclusive if they exist
+  const countBefore = records.length;
+  records = records.filter(r => r.date < '2026-06-01' || r.date > '2026-06-28');
+  if (records.length !== countBefore) {
+    log('INFO', `Automatically filtered out and removed ${countBefore - records.length} records between 2026-06-01 and 2026-06-28`);
+    rebuildIndex();
+    saveDb();
+  }
+
   if (records.length === 0 && excelPath && fs.existsSync(excelPath)) {
     log('INFO', 'Database is empty — auto-importing historical Excel data');
     importFromExcel(excelPath);
+    
+    // Also strip it after initial import if importFromExcel loaded it
+    const countAfterImport = records.length;
+    records = records.filter(r => r.date < '2026-06-01' || r.date > '2026-06-28');
+    if (records.length !== countAfterImport) {
+      log('INFO', `Removed ${countAfterImport - records.length} imported records between 2026-06-01 and 2026-06-28`);
+      rebuildIndex();
+      saveDb();
+    }
   } else if (records.length > 0) {
     log('INFO', `Database ready: ${records.length} records, dates ${getOldestDate()} to ${getLatestDate()}`);
   }
