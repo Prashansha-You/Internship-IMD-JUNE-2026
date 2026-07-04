@@ -55,14 +55,25 @@ const generateWeatherData = () => {
     const humidity830 = Math.floor(random(25, 60, 0));
     const humidity1730 = Math.floor(random(15, 40, 0));
     
-    // Rainfall is mostly 0 during summer, but occasional pre-monsoon showers
+    // Rainfall is mostly 0 during summer, but occasional pre-monsoon/monsoon showers
     const rainChance = Math.random();
-    const rain24 = rainChance > 0.85 ? random(0.5, 15.0) : 0.0;
-    const rain9 = rainChance > 0.90 ? random(0.2, 5.0) : 0.0;
+    const rain24 = rainChance > 0.70 ? Number(random(1.0, 75.0).toFixed(1)) : 0.0;
+    const rain9 = rain24 > 0 ? Number(random(0.5, rain24 * 0.7).toFixed(1)) : 0.0;
     
     // Derived values for analytics and UI
     const isHeatwave = maxTemp >= 45.0;
-    const alertLevel = isHeatwave ? 'RED' : (maxTemp >= 43.0 ? 'ORANGE' : (maxTemp >= 41.0 ? 'YELLOW' : 'GREEN'));
+    const isHeavyRain = rain24 >= 35.5; // IMD heavy rain threshold
+    const isVeryHeavyRain = rain24 >= 64.5; // IMD very heavy rain threshold
+    
+    let alertLevel = 'GREEN';
+    if (isHeatwave || isVeryHeavyRain) {
+      alertLevel = 'RED';
+    } else if (maxTemp >= 43.0 || isHeavyRain) {
+      alertLevel = 'ORANGE';
+    } else if (maxTemp >= 41.0 || rain24 >= 7.5) {
+      alertLevel = 'YELLOW';
+    }
+    
     const trend = maxChange > 1.5 ? 'RISING' : (maxChange < -1.5 ? 'FALLING' : 'STABLE');
 
     return {
@@ -87,6 +98,7 @@ const generateWeatherData = () => {
       },
       analysis: {
         heatwave: isHeatwave,
+        heavyRain: rain24 >= 7.5,
         alertLevel: alertLevel,
         trend: trend,
         forecastConfidence: Math.floor(random(75, 98, 0)) + '%'

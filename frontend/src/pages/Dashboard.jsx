@@ -284,9 +284,17 @@ export default function Dashboard() {
                   {alert.analysis.alertLevel === 'RED' ? '🔴' : alert.analysis.alertLevel === 'ORANGE' ? '🟠' : '🟡'}
                 </span>
                 <div>
-                  <p className="font-bold text-xs mb-0.5">{alert.analysis.heatwave ? 'Heatwave Warning' : 'High Temperature Alert'}</p>
+                  <p className="font-bold text-xs mb-0.5">
+                    {alert.analysis.heavyRain 
+                      ? 'Heavy Rain Alert' 
+                      : (alert.analysis.heatwave ? 'Heatwave Warning' : 'High Temperature Alert')}
+                  </p>
                   <p className="text-[10px] opacity-80 font-semibold">{alert.city}</p>
-                  <p className="text-[10px] opacity-70 mt-0.5">Max temp recorded: {alert.temperature.max}°C</p>
+                  <p className="text-[10px] opacity-70 mt-0.5">
+                    {alert.analysis.heavyRain 
+                      ? `Rainfall recorded: ${alert.rainfall.last24h.toFixed(1)} mm` 
+                      : `Max temp recorded: ${alert.temperature.max.toFixed(1)}°C`}
+                  </p>
                 </div>
               </div>
             ))}
@@ -295,190 +303,13 @@ export default function Dashboard() {
                 <span className="text-base flex-shrink-0">🟢</span>
                 <div>
                   <p className="font-bold text-xs mb-0.5">No Active Alerts</p>
-                  <p className="text-[10px] opacity-80">All districts reporting normal temperatures.</p>
+                  <p className="text-[10px] opacity-80">All districts reporting normal temperatures and rainfall.</p>
                 </div>
               </div>
             )}
           </div>
         </motion.div>
       </div>
-
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {/* PREVIOUS 3 DAYS RAINFALL — Official IMD Data              */}
-      {/* ═══════════════════════════════════════════════════════════ */}
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="glass-card rounded-2xl overflow-hidden"
-        id="rainfall-section"
-      >
-        {/* Section header */}
-        <div
-          className="px-5 py-4 border-b border-blue-900/40"
-          style={{
-            background: 'linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(37,99,168,0.10) 50%, rgba(99,37,168,0.08) 100%)',
-          }}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-white font-bold text-base flex items-center gap-2">
-                <CloudRain size={18} className="text-cyan-400" />
-                Previous 3 Days — Official IMD Rainfall Data
-              </h3>
-              <p className="text-blue-400 text-xs mt-0.5">
-                Source: IMD Nagpur Observations • Rainfall Database • Updated daily
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Download XLSX */}
-              <button
-                onClick={handleDownloadXlsx}
-                disabled={downloadingXlsx}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white transition-all shadow-lg shadow-green-900/30 disabled:opacity-50 cursor-pointer"
-                id="download-rainfall-xlsx"
-              >
-                <FileSpreadsheet size={13} />
-                {downloadingXlsx ? 'Preparing...' : 'Download Excel'}
-              </button>
-              {/* Download CSV */}
-              <button
-                onClick={handleDownloadCsv}
-                disabled={downloadingCsv}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white transition-all shadow-lg shadow-blue-900/30 disabled:opacity-50 cursor-pointer"
-                id="download-rainfall-csv"
-              >
-                <FileText size={13} />
-                {downloadingCsv ? 'Preparing...' : 'Download CSV'}
-              </button>
-              {/* Refresh */}
-              <button
-                onClick={refreshRainfall}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium glass-light text-blue-300 hover:text-white transition-all border border-blue-800/30 cursor-pointer"
-                id="refresh-rainfall"
-              >
-                <RefreshCw size={13} className={rainfallLoading ? 'animate-spin' : ''} />
-                Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-5">
-          {rainfallLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 size={32} className="text-cyan-400 animate-spin" />
-                <p className="text-blue-300 text-sm font-medium animate-pulse">Loading rainfall data...</p>
-              </div>
-            </div>
-          ) : rainfallData.length === 0 ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="flex flex-col items-center gap-3">
-                <Database size={40} className="text-blue-700" />
-                <p className="text-blue-300 font-semibold">No rainfall data available yet</p>
-                <p className="text-blue-500 text-xs">Data will appear after the historical import and daily scraping begins</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Data source badges */}
-              <div className="flex items-center gap-3 mb-4 flex-wrap text-[10px]">
-                <div className="flex items-center gap-1.5 glass-light px-3 py-1.5 rounded-lg">
-                  <div className="w-2 h-2 rounded-full bg-green-400 pulse-dot"></div>
-                  <span className="text-green-400 font-semibold">Official IMD Data</span>
-                </div>
-                <div className="glass-light px-3 py-1.5 rounded-lg text-blue-300">
-                  <Calendar size={10} className="inline mr-1" />
-                  {rainfallDates.length} Day{rainfallDates.length !== 1 ? 's' : ''} • {rainfallData.length} Records
-                </div>
-                <div className="glass-light px-3 py-1.5 rounded-lg text-blue-300">
-                  <Database size={10} className="inline mr-1" />
-                  Persistent Database
-                </div>
-              </div>
-
-              {/* Rainfall table — grouped by date */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse" id="rainfall-3day-table">
-                  <thead>
-                    <tr className="bg-blue-900/25 border-b border-blue-900/40">
-                      <th className="text-left px-4 py-3 text-blue-300 font-semibold min-w-[130px]">Date</th>
-                      <th className="text-left px-4 py-3 text-blue-300 font-semibold min-w-[180px]">Station Name</th>
-                      <th className="text-center px-4 py-3 text-cyan-300 font-semibold min-w-[120px]">Rainfall (mm)</th>
-                      <th className="text-center px-4 py-3 text-blue-400 font-semibold min-w-[100px]">Source</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rainfallDates.map((date, dIdx) => {
-                      const stations = rainfallByDate[date].sort((a, b) => a.station.localeCompare(b.station));
-                      return stations.map((rec, sIdx) => (
-                        <tr
-                          key={`${date}-${rec.station}`}
-                          className={`border-b border-blue-900/15 transition-all hover:bg-blue-900/15 ${
-                            dIdx % 2 === 0 ? '' : 'bg-blue-900/5'
-                          }`}
-                        >
-                          {/* Show date only on first row of each date group */}
-                          <td className={`px-4 py-2.5 font-semibold ${sIdx === 0 ? 'text-white' : 'text-transparent'}`}>
-                            {sIdx === 0 ? (
-                              <div>
-                                <span className="text-white">{formatDate(date)}</span>
-                                <span className="text-blue-500 ml-2 text-[10px]">{formatDayName(date)}</span>
-                              </div>
-                            ) : ''}
-                          </td>
-                          <td className="px-4 py-2.5 text-blue-200 font-medium">
-                            <div className="flex items-center gap-2">
-                              <MapPin size={10} className="text-cyan-500 shrink-0" />
-                              {rec.station}
-                            </div>
-                          </td>
-                          <td className={`text-center px-4 py-2.5 font-bold text-sm ${getRainfallColor(rec.rainfall_mm)} ${getRainfallBg(rec.rainfall_mm)} rounded`}>
-                            {rec.rainfall_mm !== null ? rec.rainfall_mm.toFixed(1) : '—'}
-                          </td>
-                          <td className="text-center px-4 py-2.5">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold ${
-                              rec.source === 'excel_import'
-                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-                                : 'bg-green-500/15 text-green-400 border border-green-500/20'
-                            }`}>
-                              {rec.source === 'excel_import' ? '📊 Excel' : '🌐 Scraped'}
-                            </span>
-                          </td>
-                        </tr>
-                      ));
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* IMD Classification Legend */}
-              <div className="flex items-center justify-center gap-3 mt-4 flex-wrap text-[10px]">
-                <span className="text-gray-500 font-semibold">IMD Classification:</span>
-                {[
-                  { label: 'Dry (0 mm)', color: 'text-gray-500' },
-                  { label: 'Light (≤2.5)', color: 'text-green-400' },
-                  { label: 'Moderate (2.5–7.5)', color: 'text-cyan-400' },
-                  { label: 'Heavy (7.5–35.5)', color: 'text-blue-400' },
-                  { label: 'Very Heavy (35.5–64.5)', color: 'text-blue-300' },
-                  { label: 'Extreme (>64.5)', color: 'text-purple-400' },
-                ].map(item => (
-                  <span key={item.label} className={`px-2 py-0.5 rounded glass-light ${item.color} font-medium`}>
-                    {item.label}
-                  </span>
-                ))}
-              </div>
-
-              {/* Footer note */}
-              <p className="text-[10px] text-blue-600 text-center mt-3">
-                *** Data sourced from official IMD Nagpur observations — Rainfall Database updated daily ***
-              </p>
-            </>
-          )}
-        </div>
-      </motion.div>
 
     </motion.div>
   );
