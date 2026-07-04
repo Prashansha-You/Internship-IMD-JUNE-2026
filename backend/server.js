@@ -227,34 +227,115 @@ app.get('/api/forecast10', (req, res) => {
   }
 });
 
-// Full monthly rainfall data for the Rainfall Report page
+// Full monthly rainfall data for the Rainfall Report page (uses persistent JSON database)
 app.get('/api/rainfall/monthly', (req, res) => {
-  const month = parseInt(req.query.month) || (new Date().getMonth() + 1);
-  const year = parseInt(req.query.year) || new Date().getFullYear();
-
   try {
-    const data = getMonthlyRainfallData(month, year);
-    if (data) {
-      res.json({ success: true, data });
-    } else {
-      res.json({ success: false, error: 'No rainfall data found for this period' });
+    // Query all records from our persistent JSON database
+    const allRecords = rainfallDb.getRecords();
+    
+    // Get unique stations and unique dates
+    const uniqueStations = [...new Set(allRecords.map(r => r.station))].sort();
+    const uniqueDates = [...new Set(allRecords.map(r => r.date))].sort(); // Oldest first
+    
+    // Group stations by district
+    const districtsMap = {};
+    
+    for (const stationName of uniqueStations) {
+      const distName = getDistrict(stationName).toUpperCase();
+      const cityName = getDistrict(stationName);
+      
+      if (!districtsMap[distName]) {
+        districtsMap[distName] = {
+          district: distName,
+          city: cityName,
+          stations: [],
+          dailyData: {},
+          dailyTotal: {},
+          totalRainfall: 0,
+          rainyDays: 0
+        };
+      }
+      
+      // Get all records for this station
+      const stationRecords = allRecords.filter(r => r.station === stationName);
+      const dailyRainfall = {};
+      let totalRain = 0;
+      let rainyDaysCount = 0;
+      
+      for (const d of uniqueDates) {
+        const rec = stationRecords.find(r => r.date === d);
+        if (rec && rec.rainfall_mm !== null) {
+          dailyRainfall[d] = rec.rainfall_mm;
+          totalRain += rec.rainfall_mm;
+          if (rec.rainfall_mm > 0) {
+            rainyDaysCount++;
+          }
+        } else {
+          dailyRainfall[d] = null;
+        }
+      }
+      
+      districtsMap[distName].stations.push({
+        name: stationName,
+        dailyRainfall: dailyRainfall,
+        total: totalRain.toFixed(1),
+        rainyDays: rainyDaysCount
+      });
     }
+    
+    // Calculate district-level daily averages and totals
+    const districtsList = Object.values(districtsMap);
+    for (const dist of districtsList) {
+      let grandTotalAverage = 0;
+      let grandRainyDays = 0;
+      
+      for (const d of uniqueDates) {
+        const stationVals = dist.stations
+          .map(s => s.dailyRainfall[d])
+          .filter(v => v !== null && v !== undefined);
+        
+        if (stationVals.length > 0) {
+          const sum = stationVals.reduce((a, b) => a + b, 0);
+          const avg = sum / stationVals.length;
+          dist.dailyTotal[d] = Number(sum.toFixed(1));
+          dist.dailyData[d] = Number(avg.toFixed(1));
+          grandTotalAverage += avg;
+          if (avg > 0) {
+            grandRainyDays++;
+          }
+        } else {
+          dist.dailyTotal[d] = 0;
+          dist.dailyData[d] = 0;
+        }
+      }
+      
+      dist.totalRainfall = grandTotalAverage.toFixed(1);
+      dist.rainyDays = grandRainyDays;
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        month: 'July',
+        year: '2026',
+        dataDate: uniqueDates[uniqueDates.length - 1] || 'N/A',
+        subdivision: 'VIDARBHA',
+        districts: districtsList
+      }
+    });
   } catch (error) {
-    console.error('Error fetching monthly rainfall:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch monthly data' });
+    console.error('Error generating monthly report:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate monthly rainfall report' });
   }
 });
 
-// Download monthly rainfall as Excel
+// Download monthly rainfall as Excel (uses persistent JSON database)
 app.get('/api/rainfall/download/:month/:year', (req, res) => {
-  const month = parseInt(req.params.month);
-  const year = parseInt(req.params.year);
-
   try {
-    const buffer = generateMonthlyExcel(month, year);
+    const buffer = rainfallDb.exportToExcel();
     if (buffer) {
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename=Rainfall_Report_${month}_${year}.xlsx`);
+      res.setHeader('Content-Disposition', `attachment; filename=Rainfall_Report_${req.params.month}_${req.params.year}.xlsx`);
       res.send(Buffer.from(buffer));
     } else {
       res.status(404).json({ success: false, error: 'No data available for download' });

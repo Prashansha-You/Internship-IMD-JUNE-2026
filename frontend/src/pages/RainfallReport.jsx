@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -147,16 +147,18 @@ export default function RainfallReport() {
     e.target.value = ''; // Reset file input
   };
 
-  // Determine which days have data
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const daysWithData = new Set();
-  if (data?.districts) {
-    data.districts.forEach(dist => {
-      Object.keys(dist.dailyData || {}).forEach(d => daysWithData.add(parseInt(d)));
-    });
-  }
-  const activeDays = Array.from(daysWithData).sort((a, b) => a - b);
-  const maxDay = activeDays.length > 0 ? Math.max(...activeDays) : daysInMonth;
+  // Determine which days/dates have data
+  const activeDays = useMemo(() => {
+    const dates = new Set();
+    if (data?.districts) {
+      data.districts.forEach(dist => {
+        Object.keys(dist.dailyData || {}).forEach(d => {
+          if (d) dates.add(d);
+        });
+      });
+    }
+    return [...dates].sort();
+  }, [data]);
 
   // Chart data for district totals
   const chartData = data?.districts?.map(dist => ({
@@ -353,11 +355,16 @@ export default function RainfallReport() {
                     <th className="text-left px-3 py-2 text-blue-300 font-semibold sticky left-0 z-10 bg-[#0a1628] min-w-[160px]">
                       District / Station
                     </th>
-                    {Array.from({ length: maxDay }, (_, i) => i + 1).map(day => (
-                      <th key={day} className={`text-center px-1 py-2 font-semibold min-w-[36px] ${
-                        daysWithData.has(day) ? 'text-cyan-300' : 'text-blue-800'
-                      }`}>
-                        {day}
+                    {activeDays.map(dateStr => (
+                      <th key={dateStr} className="text-center px-1 py-2 font-semibold min-w-[55px] text-cyan-300">
+                        {(() => {
+                          try {
+                            const d = new Date(dateStr + 'T00:00:00');
+                            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+                          } catch {
+                            return dateStr;
+                          }
+                        })()}
                       </th>
                     ))}
                     <th className="text-center px-2 py-2 text-amber-300 font-bold min-w-[50px] border-l border-blue-900/40">Total</th>
@@ -370,8 +377,7 @@ export default function RainfallReport() {
                       key={dist.district}
                       dist={dist}
                       dIdx={dIdx}
-                      maxDay={maxDay}
-                      daysWithData={daysWithData}
+                      activeDays={activeDays}
                       expanded={expandedDistricts[dist.district]}
                       onToggle={() => toggleDistrict(dist.district)}
                       isDarkMode={isDarkMode}
@@ -431,7 +437,7 @@ export default function RainfallReport() {
 }
 
 // Sub-component for district rows with expandable station rows
-function DistrictRows({ dist, dIdx, maxDay, daysWithData, expanded, onToggle, isDarkMode }) {
+function DistrictRows({ dist, dIdx, activeDays, expanded, onToggle, isDarkMode }) {
   return (
     <>
       {/* District summary row */}
@@ -459,11 +465,11 @@ function DistrictRows({ dist, dIdx, maxDay, daysWithData, expanded, onToggle, is
             </span>
           </div>
         </td>
-        {Array.from({ length: maxDay }, (_, i) => i + 1).map(day => {
-          const val = dist.dailyData?.[String(day)];
+        {activeDays.map(dateStr => {
+          const val = dist.dailyData?.[dateStr];
           const display = val !== undefined && val !== null ? val : '';
           return (
-            <td key={day} className={`text-center px-1 py-2 ${getRainfallColor(display)} ${getRainfallBg(display)} font-semibold`}>
+            <td key={dateStr} className={`text-center px-1 py-2 ${getRainfallColor(display)} ${getRainfallBg(display)} font-semibold`}>
               {display !== '' ? display : '—'}
             </td>
           );
@@ -492,11 +498,11 @@ function DistrictRows({ dist, dIdx, maxDay, daysWithData, expanded, onToggle, is
             >
               <span className="text-[9px]">{station.name}</span>
             </td>
-            {Array.from({ length: maxDay }, (_, i) => i + 1).map(day => {
-              const val = station.dailyRainfall?.[String(day)];
+            {activeDays.map(dateStr => {
+              const val = station.dailyRainfall?.[dateStr];
               const display = val !== null && val !== undefined ? val : '';
               return (
-                <td key={day} className={`text-center px-1 py-1.5 text-[9px] ${getRainfallColor(display)} ${getRainfallBg(display)}`}>
+                <td key={dateStr} className={`text-center px-1 py-1.5 text-[9px] ${getRainfallColor(display)} ${getRainfallBg(display)}`}>
                   {display !== '' ? display : '—'}
                 </td>
               );
