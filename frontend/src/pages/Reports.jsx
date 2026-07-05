@@ -378,10 +378,13 @@ export default function Reports() {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleShare(platform)}
                   className="flex items-center gap-2 p-2 rounded-lg text-xs font-medium text-white transition-all"
-                  style={{ background: `${bg}30`, border: `1px solid ${bg}50` }}
+                  style={{ 
+                    background: isDarkMode ? `${bg}30` : bg, 
+                    border: isDarkMode ? `1px solid ${bg}50` : 'none' 
+                  }}
                 >
                   <Icon size={14} />
-                  <span className="text-[10px]">{label}</span>
+                  <span className="text-[10px] font-semibold">{label}</span>
                 </motion.button>
               ))}
             </div>

@@ -704,7 +704,7 @@ body {
 
 .light-mode .old-theme-link {
   background-color: transparent !important;
-  color: #475569 !important;
+  color: #0f172a !important;
   border-left: 3px solid transparent !important;
   border-bottom: none !important;
   transition: all 0.2s ease !important;
@@ -712,7 +712,7 @@ body {
 
 .light-mode .old-theme-link span,
 .light-mode .old-theme-link a {
-  color: #475569 !important;
+  color: #0f172a !important;
 }
 
 .light-mode .old-theme-link:hover {
