@@ -79,17 +79,18 @@ const generateWeatherData = () => {
     const rain24 = dbRecord && dbRecord.rainfall_mm !== null ? dbRecord.rainfall_mm : 0.0;
     const rain9 = dbRecord && dbRecord.rf_since_09hrs !== null ? dbRecord.rf_since_09hrs : 0.0;
     
-    // Derived values for analytics and UI
+    // Derived values for analytics and UI (IMD official criteria)
     const isHeatwave = maxTemp >= 45.0;
-    const isHeavyRain = rain24 >= 35.5; // IMD heavy rain threshold
-    const isVeryHeavyRain = rain24 >= 64.5; // IMD very heavy rain threshold
+    const isVeryHeavyRain = rain24 >= 115.6; // IMD Very Heavy
+    const isHeavyRain = rain24 >= 64.5; // IMD Heavy
+    const isModerateRain = rain24 >= 15.6; // IMD Moderate
     
     let alertLevel = 'GREEN';
     if (isHeatwave || isVeryHeavyRain) {
       alertLevel = 'RED';
     } else if (maxTemp >= 43.0 || isHeavyRain) {
       alertLevel = 'ORANGE';
-    } else if (maxTemp >= 41.0 || rain24 >= 7.5) {
+    } else if (maxTemp >= 41.0 || isModerateRain) {
       alertLevel = 'YELLOW';
     }
     
@@ -155,9 +156,9 @@ async function updateWeatherCache() {
           
           const isHeatwave = maxTemp >= 45.0;
           let alertLevel = 'normal';
-          if (maxTemp >= 45.0 || rain24 >= 64.5) alertLevel = 'danger';
-          else if (maxTemp >= 42.0 || rain24 >= 35.5) alertLevel = 'warning';
-          else if (maxTemp >= 38.0 || rain24 >= 7.5) alertLevel = 'watch';
+          if (maxTemp >= 45.0 || rain24 >= 115.6) alertLevel = 'danger';
+          else if (maxTemp >= 42.0 || rain24 >= 64.5) alertLevel = 'warning';
+          else if (maxTemp >= 38.0 || rain24 >= 15.6) alertLevel = 'watch';
           
           return {
             city: city,
@@ -241,13 +242,20 @@ app.get('/api/forecast', (req, res) => {
     const date = new Date();
     date.setDate(date.getDate() + i + 1);
     
+    const rainProb = Math.floor(random(10, 85, 0));
+    let condition = 'Partly Cloudy';
+    if (rainProb > 75) condition = 'Heavy Rain';
+    else if (rainProb > 55) condition = 'Moderate Rain';
+    else if (rainProb > 30) condition = 'Light Rain';
+    else if (rainProb > 10) condition = 'Very Light Rain';
+
     return {
       date: date.toISOString().split('T')[0],
       dayName: date.toLocaleDateString('en-IN', { weekday: 'short' }),
-      maxTemp: random(41.0, 47.0),
-      minTemp: random(27.0, 31.0),
-      condition: pick(['Sunny', 'Mostly Sunny', 'Partly Cloudy', 'Hot', 'Heatwave']),
-      rainProbability: Math.floor(random(0, 30, 0))
+      maxTemp: Number(random(28.0, 32.0).toFixed(1)),
+      minTemp: Number(random(22.0, 25.0).toFixed(1)),
+      condition: condition,
+      rainProbability: rainProb
     };
   });
 
@@ -301,13 +309,16 @@ app.get('/api/forecast10', (req, res) => {
       const val = dateMap[dateStr];
       const avgRainfall = val.count > 0 ? Number((val.rainfall_mm / val.count).toFixed(1)) : 0;
       
+      // Determine condition based on actual rainfall (IMD official criteria)
       let condition, icon;
-      if (avgRainfall === 0) { condition = 'Dry'; icon = '☀️'; }
-      else if (avgRainfall <= 2.5) { condition = 'Light Rain'; icon = '🌦️'; }
-      else if (avgRainfall <= 7.5) { condition = 'Moderate Rain'; icon = '🌧️'; }
-      else if (avgRainfall <= 35.5) { condition = 'Heavy Rain'; icon = '🌧️'; }
-      else if (avgRainfall <= 64.5) { condition = 'Very Heavy Rain'; icon = '⛈️'; }
-      else { condition = 'Extremely Heavy Rain'; icon = '⛈️'; }
+      if (avgRainfall === 0 || avgRainfall == null) { condition = 'No Rain'; icon = '☀️'; }
+      else if (avgRainfall >= 0.1 && avgRainfall <= 2.4) { condition = 'Very Light Rain'; icon = '🌦️'; }
+      else if (avgRainfall >= 2.5 && avgRainfall <= 15.5) { condition = 'Light Rain'; icon = '🌧️'; }
+      else if (avgRainfall >= 15.6 && avgRainfall <= 64.4) { condition = 'Moderate Rain'; icon = '🌧️'; }
+      else if (avgRainfall >= 64.5 && avgRainfall <= 115.5) { condition = 'Heavy Rain'; icon = '⛈️'; }
+      else if (avgRainfall >= 115.6 && avgRainfall <= 204.4) { condition = 'Very Heavy Rain'; icon = '⛈️'; }
+      else if (avgRainfall >= 204.5) { condition = 'Extremely Heavy Rain'; icon = '🌊'; }
+      else { condition = 'Light Rain'; icon = '🌧️'; }
       
       return {
         date: dateStr,

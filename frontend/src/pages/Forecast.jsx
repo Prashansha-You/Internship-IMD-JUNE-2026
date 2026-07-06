@@ -83,8 +83,15 @@ export default function Forecast() {
       const confidence = 95 - i * 5;
       const departure = Number((maxTemp - 31.2).toFixed(1)); // Monsoonal average reference
       
-      const icon = rainfall > 15 ? '🌊' : (rainfall > 5 ? '🌧️' : (rainfall > 0 ? '🌦️' : '⛅'));
-      const condition = rainfall > 15 ? 'Very Heavy Rain' : (rainfall > 5 ? 'Heavy Rain' : (rainfall > 0 ? 'Light Showers' : 'Partly Cloudy'));
+      let icon = '☀️';
+      let condition = 'No Rain';
+      if (rainfall === 0 || rainfall == null) { condition = 'No Rain'; icon = '☀️'; }
+      else if (rainfall >= 0.1 && rainfall <= 2.4) { condition = 'Very Light Rain'; icon = '🌦️'; }
+      else if (rainfall >= 2.5 && rainfall <= 15.5) { condition = 'Light Rain'; icon = '🌧️'; }
+      else if (rainfall >= 15.6 && rainfall <= 64.4) { condition = 'Moderate Rain'; icon = '🌧️'; }
+      else if (rainfall >= 64.5 && rainfall <= 115.5) { condition = 'Heavy Rain'; icon = '⛈️'; }
+      else if (rainfall >= 115.6 && rainfall <= 204.4) { condition = 'Very Heavy Rain'; icon = '⛈️'; }
+      else if (rainfall >= 204.5) { condition = 'Extremely Heavy Rain'; icon = '🌊'; }
 
       return {
         day,
