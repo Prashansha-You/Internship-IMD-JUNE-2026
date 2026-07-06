@@ -79,8 +79,42 @@ function CitySidePanel({ city, regionStats, onOpenRainfallModal, onClose }) {
     }
   }, [city?.city]);
 
+  const getProcessedForecast10 = () => {
+    if (!forecast10 || forecast10.length === 0) return [];
+    
+    const list = [...forecast10];
+    const lastIdx = list.length - 1;
+    
+    // Today's observed values from the main table (real-time, zero lag!)
+    const currentRain = parseFloat(city.rainfall24hr ?? city.rainfall?.last24h ?? city.rainfall24h ?? 0);
+    const currentMax = parseFloat(city.maxTemp ?? city.temperature?.max ?? 30.0);
+    const currentMin = parseFloat(city.minTemp ?? city.temperature?.min ?? 23.0);
+    
+    // Aligned condition term and icon based on official IMD criteria
+    let condition = 'No Rain';
+    let icon = '☀️';
+    if (currentRain >= 0.1 && currentRain <= 2.4) { condition = 'Very Light Rain'; icon = '🌦️'; }
+    else if (currentRain >= 2.5 && currentRain <= 15.5) { condition = 'Light Rain'; icon = '🌧️'; }
+    else if (currentRain >= 15.6 && currentRain <= 64.4) { condition = 'Moderate Rain'; icon = '🌧️'; }
+    else if (currentRain >= 64.5 && currentRain <= 115.5) { condition = 'Heavy Rain'; icon = '⛈️'; }
+    else if (currentRain >= 115.6 && currentRain <= 204.4) { condition = 'Very Heavy Rain'; icon = '⛈️'; }
+    else if (currentRain >= 204.5) { condition = 'Extremely Heavy Rain'; icon = '🌊'; }
+    
+    list[lastIdx] = {
+      ...list[lastIdx],
+      expectedRainfall: currentRain,
+      actualRainfall: currentRain,
+      condition: condition,
+      icon: icon
+    };
+    
+    return list;
+  };
+
+  const processedForecast10 = getProcessedForecast10();
+
   const getTempTrendData = () => {
-    if (!forecast10 || forecast10.length === 0) {
+    if (!processedForecast10 || processedForecast10.length === 0) {
       return timeData ? timeData.map(t => ({ date: t.time, 'Max Temp': t.temp, 'Min Temp': t.temp - 5 })) : [];
     }
     
@@ -92,13 +126,21 @@ function CitySidePanel({ city, regionStats, onOpenRainfallModal, onClose }) {
       return x - Math.floor(x);
     };
     
-    return forecast10.map((dayData, i) => {
+    return processedForecast10.map((dayData, i) => {
       const day = dayData.day || i;
-      const maxOffset = Number((Math.sin(day * 1.5) * 1.2 + pseudoRandom(day + 2) * 0.8).toFixed(1));
-      const minOffset = Number((Math.cos(day * 1.2) * 0.8 + pseudoRandom(day + 4) * 0.6).toFixed(1));
       
-      const maxTemp = Number((currentMax + maxOffset).toFixed(1));
-      const minTemp = Number((currentMin + minOffset).toFixed(1));
+      let maxTemp, minTemp;
+      if (i === processedForecast10.length - 1) {
+        // Today's temperature must EXACTLY match the live observations table (no 1 degree lag!)
+        maxTemp = currentMax;
+        minTemp = currentMin;
+      } else {
+        // Prior days have stable pseudo-random variation
+        const maxOffset = Number((Math.sin(day * 1.5) * 1.2 + pseudoRandom(day + 2) * 0.8).toFixed(1));
+        const minOffset = Number((Math.cos(day * 1.2) * 0.8 + pseudoRandom(day + 4) * 0.6).toFixed(1));
+        maxTemp = Number((currentMax + maxOffset).toFixed(1));
+        minTemp = Number((currentMin + minOffset).toFixed(1));
+      }
       
       return {
         date: dayData.dateFormatted,
@@ -401,11 +443,11 @@ function CitySidePanel({ city, regionStats, onOpenRainfallModal, onClose }) {
             <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             Loading forecast...
           </div>
-        ) : forecast10 && forecast10.length > 0 ? (
+        ) : processedForecast10 && processedForecast10.length > 0 ? (
           <>
             {/* Bar chart */}
             <ResponsiveContainer width="100%" height={80}>
-              <BarChart data={forecast10} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
+              <BarChart data={processedForecast10} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(59,130,196,0.08)" />
                 <XAxis dataKey="dateFormatted" tick={{ fontSize: 7, fill: '#4e7a9e' }} interval={0} angle={-25} textAnchor="end" height={28} />
                 <YAxis tick={{ fontSize: 7, fill: '#4e7a9e' }} />
@@ -422,7 +464,7 @@ function CitySidePanel({ city, regionStats, onOpenRainfallModal, onClose }) {
                 <span className="flex-1">Condition</span>
                 <span className="w-14 text-right">Rainfall</span>
               </div>
-              {forecast10.map((day, i) => (
+              {processedForecast10.map((day, i) => (
                 <div
                   key={i}
                   className={`flex items-center gap-2 text-[9px] py-1 px-1.5 rounded-md transition-colors ${day.expectedRainfall > 20 ? 'bg-sky-400/10 border-l-2 border-sky-400/50' : day.expectedRainfall > 5 ? 'bg-sky-400/5 border-l-2 border-transparent' : 'bg-transparent border-l-2 border-transparent'}`}
@@ -433,7 +475,7 @@ function CitySidePanel({ city, regionStats, onOpenRainfallModal, onClose }) {
                   <span className="text-cyan-300 font-bold w-14 text-right shrink-0">{day.expectedRainfall} mm</span>
                 </div>
               ))}
-              {forecast10.length > 0 && forecast10[0].isActualData && (
+              {processedForecast10.length > 0 && processedForecast10[0].isActualData && (
                 <div className="mt-1.5 px-1.5 py-1 rounded-md bg-green-900/20 border border-green-800/30">
                   <span className="text-[8px] text-green-400 font-semibold">✓ Real IMD readings from Excel data</span>
                 </div>
